@@ -38,17 +38,22 @@ def point_in_polygon?(lon:, lat:, area_coords:)
   end
 end
 
+already_added = Set.new
+
 builder = Nokogiri::XML::Builder.new do |xml|
   xml.gpx(version: '1.1', creator: 'https://github.com/DawidJanczak/opencell_csv_to_gpx') do |gpx|
     CSV.foreach(ARGF.file, headers: true) do |row|
       lat, lon = row.values_at('lat', 'lon')
+      next if already_added.include?([lat, lon])
+
       if row['radio'] == 'LTE' && point_in_polygon?(lon: lon.to_f, lat: lat.to_f, area_coords: area_coords)
         gpx.wpt(lat: lat, lon: lon) do |wpt|
           wpt.type { |t| t.text row['radio'] }
         end
+        already_added << [lat, lon]
       end
     end
   end
 end
 
-File.write('stations_polygon.gpx', builder.to_xml)
+File.write('stations.gpx', builder.to_xml)
